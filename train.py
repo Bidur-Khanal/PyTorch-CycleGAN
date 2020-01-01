@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+
 
 import argparse
 import itertools
@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 from torch.autograd import Variable
 from PIL import Image
 import torch
+import os 
 
 from models import Generator
 from models import Discriminator
@@ -30,10 +31,10 @@ parser.add_argument('--output_nc', type=int, default=3, help='number of channels
 parser.add_argument('--cuda', action='store_true', help='use GPU computation')
 parser.add_argument('--n_cpu', type=int, default=8, help='number of cpu threads to use during batch generation')
 opt = parser.parse_args()
-print(opt)
 
 if torch.cuda.is_available() and not opt.cuda:
     print("WARNING: You have a CUDA device, so you should probably run with --cuda")
+
 
 ###### Definition of variables ######
 # Networks
@@ -48,10 +49,31 @@ if opt.cuda:
     netD_A.cuda()
     netD_B.cuda()
 
-netG_A2B.apply(weights_init_normal)
-netG_B2A.apply(weights_init_normal)
-netD_A.apply(weights_init_normal)
-netD_B.apply(weights_init_normal)
+# path to saved trained weights
+saved_path= 'output/'
+
+#networks name in .pth
+models= []
+
+for filename in os.listdir(saved_path):
+    if filename.endswith('pth'):
+        models.append(saved_path+filename)
+        filename = filename[:-4]
+        models.sort()
+
+print (models)
+if models:
+    # Load state dicts
+    netD_A.load_state_dict(torch.load(models[0]))
+    netD_B.load_state_dict(torch.load(models[1]))
+    netG_A2B.load_state_dict(torch.load(models[2]))
+    netG_B2A.load_state_dict(torch.load(models[3]))
+    print ("models loaded")
+else:
+    netG_A2B.apply(weights_init_normal)
+    netG_B2A.apply(weights_init_normal)
+    netD_A.apply(weights_init_normal)
+    netD_B.apply(weights_init_normal)
 
 # Lossess
 criterion_GAN = torch.nn.MSELoss()
@@ -179,10 +201,15 @@ for epoch in range(opt.epoch, opt.n_epochs):
     lr_scheduler_G.step()
     lr_scheduler_D_A.step()
     lr_scheduler_D_B.step()
+    
+    checkpoint_netG_A2B = {'epoch':epoch+1,'state_dict':netG_A2B.state_dict(),'optimizer':optimizer_G.state_dict()}
+    checkpoint_netG_B2A = {'epoch':epoch+1,'state_dict':netG_B2A.state_dict(),'optimizer':optimizer_G.state_dict()}
+    checkpoint_netD_A = {'epoch':epoch+1,'state_dict':netD_A.state_dict(),'optimizer':optimizer_D_A.state_dict()}
+    checkpoint_netD_B = {'epoch':epoch+1,'state_dict':netD_B.state_dict(),'optimizer':optimizer_D_B.state_dict()}
 
     # Save models checkpoints
-    torch.save(netG_A2B.state_dict(), 'output/netG_A2B.pth')
-    torch.save(netG_B2A.state_dict(), 'output/netG_B2A.pth')
-    torch.save(netD_A.state_dict(), 'output/netD_A.pth')
-    torch.save(netD_B.state_dict(), 'output/netD_B.pth')
+    torch.save(checkpoint_netG_A2B , 'output/netG_A2B.pth')
+    torch.save(checkpoint_netG_B2A , 'output/netG_B2A.pth')
+    torch.save(checkpoint_netD_A, 'output/netD_A.pth')
+    torch.save(checkpoint_netD_B, 'output/netD_B.pth')
 ###################################
