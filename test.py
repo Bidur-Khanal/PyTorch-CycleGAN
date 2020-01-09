@@ -38,8 +38,8 @@ if opt.cuda:
     netG_B2A.cuda()
 
 # Load state dicts
-netG_A2B.load_state_dict(torch.load(opt.generator_A2B))
-netG_B2A.load_state_dict(torch.load(opt.generator_B2A))
+netG_A2B.load_state_dict(torch.load(opt.generator_A2B)['state_dict'])
+netG_B2A.load_state_dict(torch.load(opt.generator_B2A)['state_dict'])
 
 # Set model's test mode
 netG_A2B.eval()
